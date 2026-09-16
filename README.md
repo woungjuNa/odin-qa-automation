@@ -22,6 +22,7 @@
 
 - Python 3.12
 - Airtest — 이미지 템플릿 매칭 기반 화면 인식 자동화 프레임워크
+- pywin32 — 스크린샷 전에 오딘 창을 맨 앞으로 가져오는 Windows API 호출
 - Google Apps Script — 실행 이력을 Google Sheets에 자동 기록하는 웹훅
 - AirtestIDE (개발 중 템플릿 캡처용, 실행 시에는 불필요)
 
@@ -39,6 +40,8 @@
    (사냥터에서는 스킬 아이콘으로 바뀜)은 템플릿에서 제외
 6. 각 단계마다 오딘 창을 맨 앞으로 가져온 뒤 스크린샷 촬영 (다른 창이 겹쳐 찍히는 것 방지)
 7. 성공/실패와 무관하게 직접 만든 리포터로 HTML 리포트 자동 생성 (단계별 스크린샷 포함)
+8. 실행 결과 한 줄(시각, PASS/FAIL, 소요시간, 실패 사유)을 Google Sheets 웹훅으로 전송
+   (미설정 시 이 단계만 건너뜀)
 
 ## 스크린샷
 
@@ -47,6 +50,19 @@
 |![캐릭터 선택 화면](docs/screenshots/character_select.png)|![인게임 화면](docs/screenshots/ingame.png)|
 
 ## 실행 방법
+
+### 사전 준비
+
+- Windows + Python 3.12 (3.13은 Airtest 의존성 문제로 설치 실패 — 아래 "구현 중 발견한 문제" 참고)
+- 오딘 PC 클라이언트를 웹 로그인까지 마친 뒤 실행해서, **스플래시 화면 상태로 띄워둔 상태**에서 시작
+
+```
+py -3.12 -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 실행
 
 오딘이 안티치트 때문에 관리자 권한으로 실행되므로, 아래 명령어도 **관리자 권한 터미널**에서
 실행해야 합니다 (그렇지 않으면 Windows 권한 격리(UIPI)에 막혀 에러 메시지도 없이 마우스
@@ -58,7 +74,9 @@ cd smoke_test.air
 python smoke_test.py
 ```
 
-실행 후 `smoke_test.air/log/report.html`을 열면 결과를 확인할 수 있습니다.
+실행 후 `smoke_test.air/log/report.html`을 열면 결과를 확인할 수 있습니다. 실패 시에도
+실패 시점 스크린샷(`99_failure.png`)이 포함된 리포트가 생성되고, 종료 코드가 0이 아니므로
+스케줄러/CI에서 실패를 감지할 수 있습니다.
 
 ## 실행 이력 관리 (Google Sheets 연동)
 
@@ -67,6 +85,22 @@ python smoke_test.py
 "최근에 몇 번 돌렸고 몇 번 통과했는지" 히스토리를 한눈에 파악할 수 있습니다.
 
 **실행 예시 시트**: https://docs.google.com/spreadsheets/d/1RNdHReJAfhZ5iX_mJwGQQOS6u0UJa835ScSjB9uwOnQ/edit?usp=sharing
+
+### 설정 방법 (선택)
+
+설정하지 않으면 시트 전송 단계만 건너뛰고, 테스트와 HTML 리포트는 그대로 동작합니다.
+
+1. 새 Google Sheets를 만들고 `확장 프로그램 > Apps Script`에서
+   [docs/google_apps_script.js](docs/google_apps_script.js) 내용을 붙여넣은 뒤,
+   `배포 > 새 배포 > 웹 앱` (실행: 나, 액세스: 모든 사용자)으로 배포해 URL을 받습니다.
+   배포 URL을 브라우저로 열어 `{"status":"ok"}`가 보이면 정상입니다.
+2. `smoke_test.air/sheets_config.example.py`를 `sheets_config.py`로 복사하고 위 URL을 넣습니다.
+   (`sheets_config.py`는 `.gitignore`에 등록되어 있어 커밋되지 않습니다.)
+3. 선택: URL만 알면 누구나 행을 추가할 수 있으므로, Apps Script의 `TOKEN`과
+   `sheets_config.py`의 `WEBHOOK_TOKEN`에 같은 문자열을 넣으면 일치하는 요청만 기록됩니다.
+
+전송 결과는 HTTP 상태 코드가 아니라 Apps Script가 돌려주는 JSON(`status: ok`)으로 판정합니다.
+배포 권한이 잘못되면 구글 로그인 페이지가 200으로 오는데, 이 경우도 실패로 잡기 위해서입니다.
 
 ## 구현 중 발견한 문제와 해결
 
@@ -84,6 +118,23 @@ python smoke_test.py
 - **위치 의존적인 인게임 UI**: 인게임 HUD의 하단 상점 아이콘(교환 상인/소모품 상인)이 사냥터에
   있을 때는 스킬 아이콘으로 바뀌는 걸 확인함 → 위치와 무관하게 항상 고정인 레벨 표시와 상단
   메뉴 아이콘만 템플릿으로 사용
+
+## 프로젝트 구조
+
+```
+QA_AI/
+├── smoke_test.air/                 # Airtest 프로젝트 (.air 폴더명과 .py 파일명이 같아야 함)
+│   ├── smoke_test.py               # 메인 테스트 스크립트
+│   ├── report.py                   # 커스텀 HTML 리포트 생성기
+│   ├── sheets_config.example.py    # Google Sheets 웹훅 설정 예시 (복사해서 sheets_config.py로)
+│   ├── *.png                       # 화면 인식용 템플릿 이미지
+│   └── log/                        # 실행 시 자동 생성 (스크린샷, report.html)
+├── docs/
+│   ├── google_apps_script.js       # Google Sheets에 붙여넣는 Apps Script 코드
+│   ├── screenshots/                # README용 스크린샷
+│   └── superpowers/                # 설계 문서 및 구현 계획
+└── requirements.txt
+```
 
 ## 설계 문서
 

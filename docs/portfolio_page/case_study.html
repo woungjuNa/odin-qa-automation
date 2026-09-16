@@ -1,0 +1,516 @@
+<title>오딘 QA 자동화</title>
+<meta name="description" content="반복적인 클라이언트 스모크 테스트를 화면 인식 기반으로 자동화하며 겪은 문제와 해결 과정을 정리한 기록입니다.">
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --border: #dfe1e6;
+    --text: #172b4d;
+    --muted: #6b778c;
+    --accent: #0c66e4;
+    --accent-ink: #0055cc;
+    --accent-bg: #e9f2ff;
+    --warn: #a54800;
+    --warn-bg: #fff7e6;
+    --pass: #216e4e;
+    --pass-bg: #dcfff1;
+    --code-bg: #f1f2f5;
+    --shadow: 0 1px 2px rgba(23,43,77,0.06), 0 4px 16px -8px rgba(23,43,77,0.16);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216;
+      --surface: #171b21;
+      --border: #2c3742;
+      --text: #e7ecf3;
+      --muted: #9aa7b6;
+      --accent: #4c9aff;
+      --accent-ink: #85b8ff;
+      --accent-bg: #16233a;
+      --warn: #e2a336;
+      --warn-bg: #2d2410;
+      --pass: #4bce97;
+      --pass-bg: #10291f;
+      --code-bg: #1d232b;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216;
+    --surface: #171b21;
+    --border: #2c3742;
+    --text: #e7ecf3;
+    --muted: #9aa7b6;
+    --accent: #4c9aff;
+    --accent-ink: #85b8ff;
+    --accent-bg: #16233a;
+    --warn: #e2a336;
+    --warn-bg: #2d2410;
+    --pass: #4bce97;
+    --pass-bg: #10291f;
+    --code-bg: #1d232b;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.6);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    padding-block: 56px;
+  }
+
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  header {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent-ink);
+    letter-spacing: 0.02em;
+  }
+
+  h1 {
+    font-weight: 700;
+    font-size: clamp(24px, 4vw, 30px);
+    margin: 0;
+    text-wrap: balance;
+    line-height: 1.35;
+  }
+
+  .lede {
+    color: var(--muted);
+    font-size: 15.5px;
+    line-height: 1.75;
+    margin: 0;
+    max-width: 62ch;
+  }
+
+  .meta-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+    padding: 16px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .meta-bar span { color: var(--muted); }
+  .meta-bar strong { color: var(--text); font-weight: 600; }
+
+  .meta-bar a {
+    color: var(--accent-ink);
+    font-weight: 600;
+    text-decoration: none;
+    margin-left: auto;
+  }
+
+  section { display: flex; flex-direction: column; gap: 16px; }
+
+  h2 {
+    font-size: 19px;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  h2::before {
+    content: "";
+    width: 4px;
+    height: 18px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  p { line-height: 1.75; font-size: 15px; margin: 0; }
+
+  .stack-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 6px;
+    background: var(--accent-bg);
+    color: var(--accent-ink);
+    border: 1px solid transparent;
+  }
+
+  ol.flow {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  ol.flow li {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    position: relative;
+    padding-bottom: 20px;
+  }
+
+  ol.flow li:last-child { padding-bottom: 0; }
+
+  ol.flow li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    top: 26px;
+    bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+
+  .flow-num {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    text-align: center;
+    padding: 0;
+  }
+
+  .flow-text {
+    font-size: 14.5px;
+    line-height: 1.7;
+    padding-top: 2px;
+  }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  p code, li code {
+    background: var(--accent-bg);
+    color: var(--accent-ink);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+
+  .shots {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .shots figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+
+  .shots img {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: block;
+  }
+
+  figcaption { font-size: 12.5px; color: var(--muted); text-align: center; }
+
+  .trouble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .trouble h3 {
+    font-size: 15.5px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .trouble .no {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .trouble-row {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 4px 12px;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  .trouble-row dt {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    padding-top: 2px;
+  }
+
+  .trouble-row dd { margin: 0; }
+  .trouble-row dd.fix { color: var(--pass); font-weight: 600; }
+
+  .results {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .results li {
+    list-style: none;
+    display: flex;
+    gap: 10px;
+    font-size: 14.5px;
+    line-height: 1.7;
+    align-items: flex-start;
+  }
+
+  .results li::before {
+    content: "✓";
+    color: var(--pass);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .results ul { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+  ul.gaps { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; }
+
+  ul.gaps li {
+    list-style: none;
+    display: flex;
+    gap: 10px;
+    font-size: 14.5px;
+    line-height: 1.7;
+    align-items: flex-start;
+  }
+
+  ul.gaps li::before {
+    content: "△";
+    color: var(--warn);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  footer a { color: var(--accent-ink); font-weight: 600; text-decoration: none; }
+
+  @media (max-width: 560px) {
+    .shots { grid-template-columns: 1fr; }
+    .trouble-row { grid-template-columns: 1fr; }
+    .trouble-row dt { padding-top: 6px; }
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+<div class="page">
+
+  <header>
+    <span class="eyebrow">개인 프로젝트 · QA 자동화</span>
+    <h1>오딘 QA 스모크 테스트 자동화</h1>
+    <p class="lede">
+      빌드마다 사람이 직접 실행해서 눈으로 확인하던 클라이언트 스모크 테스트를,
+      화면 인식 기반 자동화로 전환하며 겪은 문제와 해결 과정을 정리했습니다.
+    </p>
+    <div class="meta-bar">
+      <span>대상 게임 <strong>오딘: 발할라 라이징 (PC)</strong></span>
+      <span>기간 <strong>2026.09</strong></span>
+      <span>역할 <strong>설계 · 구현 · 검증 전체</strong></span>
+      <a href="https://github.com/woungjuNa/odin-qa-automation" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </header>
+
+  <section>
+    <h2>프로젝트 개요</h2>
+    <p>
+      게임 QA에서는 빌드가 나올 때마다 클라이언트가 정상적으로 실행되는지를 확인하는
+      스모크 테스트를 반복적으로 수행합니다. 스모크 테스트가 이미 깨진 걸 못 거르고
+      다음 단계로 넘어가면, 이후 담당자들이 더 깊은 시나리오 테스트에 시간을 쓰다가
+      뒤늦게 "애초에 실행이 안 됐다"는 걸 발견하는 식으로 QA 인력 전체의 시간이
+      낭비될 수 있습니다. 그래서 가장 먼저, 가장 빠르게 걸러내는 이 단계를
+      자동화할 가치가 크다고 판단했습니다.
+    </p>
+    <p>
+      다만 오딘은 계정마다 보유 캐릭터가 달라 화면 상태가 매번 다르고, 안티치트로
+      인해 클라이언트가 관리자 권한으로 실행되는 등 일반적인 튜토리얼 예제가 그대로
+      통하지 않는 실제 상용 게임 특유의 문제들이 있었습니다. 기획·개발 없이 혼자
+      진행한 개인 프로젝트라, 문제 진단부터 설계 조정, 구현, 검증까지 전 과정을
+      직접 책임졌습니다. 이 페이지는 그 과정의 기록입니다.
+    </p>
+    <div class="stack-row">
+      <span class="chip">Python 3.12</span>
+      <span class="chip">Airtest</span>
+      <span class="chip">이미지 템플릿 매칭</span>
+      <span class="chip">pywin32</span>
+      <span class="chip">커스텀 HTML 리포터</span>
+      <span class="chip">Google Sheets / Apps Script</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>구현 흐름</h2>
+    <ol class="flow">
+      <li><span class="flow-num">1</span><span class="flow-text">Windows API로 오딘 창을 찾아 연결 (<code>connect_device("Windows:///?title_re=ODIN")</code>)</span></li>
+      <li><span class="flow-num">2</span><span class="flow-text">스플래시 로고를 인식하고, 화면이 실제로 넘어갈 때까지 반복 클릭</span></li>
+      <li><span class="flow-num">3</span><span class="flow-text">캐릭터 목록과 무관하게 항상 고정으로 표시되는 화면 제목으로 캐릭터 선택 화면 진입 확인</span></li>
+      <li><span class="flow-num">4</span><span class="flow-text">"게임하기" 버튼 클릭 (항상 같은 위치라 특정 캐릭터를 고를 필요 없음)</span></li>
+      <li><span class="flow-num">5</span><span class="flow-text">서로 다른 화면 위치에 있는 두 UI 요소(레벨 표시 + 상단 메뉴 아이콘)가 모두 인식되어야 인게임 진입으로 판정</span></li>
+      <li><span class="flow-num">6</span><span class="flow-text">성공/실패와 무관하게 단계별 스크린샷이 담긴 HTML 리포트 자동 생성</span></li>
+      <li><span class="flow-num">7</span><span class="flow-text">실행 결과(시각·PASS/FAIL·소요시간·실패 사유)를 Google Sheets에 한 줄씩 기록해, 리포트를 하나씩 열지 않아도 실행 히스토리를 한눈에 확인</span></li>
+    </ol>
+    <pre><code>wait(SPLASH_LOGO, timeout=15)
+for attempt in range(15):
+    if not exists(SPLASH_LOGO):
+        break
+    touch(SPLASH_LOGO)
+    sleep(1)
+else:
+    raise Exception("스플래시 화면을 15번 클릭했지만 다음 화면으로 넘어가지 않았습니다.")</code></pre>
+    <div class="shots">
+      <figure>
+        <img src="../screenshots/character_select.png" alt="캐릭터 선택 화면 진입 확인">
+        <figcaption>캐릭터 선택 화면 — 고정 타이틀만 판단 기준으로 사용</figcaption>
+      </figure>
+      <figure>
+        <img src="../screenshots/ingame.png" alt="인게임 진입 확인">
+        <figcaption>인게임 화면 — 레벨 표시 + 상단 메뉴로 이중 확인</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>트러블슈팅</h2>
+
+    <div class="trouble">
+      <h3><span class="no">01</span> Python 3.13에서 Airtest 설치 실패</h3>
+      <dl class="trouble-row">
+        <dt>증상</dt><dd><code>pip install airtest</code> 중 numpy 빌드 단계에서 컴파일 에러 발생</dd>
+        <dt>원인</dt><dd>Airtest가 요구하는 <code>numpy&lt;2.0</code>이 Python 3.13용 사전빌드 wheel을 제공하지 않아, 소스 빌드에 필요한 C++ 컴파일러가 없어 실패</dd>
+        <dt>해결</dt><dd class="fix">Python 3.12를 추가 설치하고 해당 버전으로 가상환경을 다시 생성</dd>
+      </dl>
+    </div>
+
+    <div class="trouble">
+      <h3><span class="no">02</span> 관리자 권한 게임에서 클릭이 먹지 않음</h3>
+      <dl class="trouble-row">
+        <dt>증상</dt><dd><code>touch()</code> 호출 시 <code>pywintypes.error: SetCursorPos</code> 에러, 이후엔 에러 없이 클릭만 무시됨</dd>
+        <dt>원인</dt><dd>오딘이 안티치트 때문에 관리자 권한으로 실행되어, 일반 권한 프로세스의 입력을 Windows UIPI(권한 격리)가 차단</dd>
+        <dt>해결</dt><dd class="fix">자동화 스크립트를 실행하는 터미널도 관리자 권한으로 실행</dd>
+      </dl>
+    </div>
+
+    <div class="trouble">
+      <h3><span class="no">03</span> 로딩 화면에서 클릭이 씹힘</h3>
+      <dl class="trouble-row">
+        <dt>증상</dt><dd>스플래시 로고를 인식해 한 번 클릭했는데 다음 화면으로 넘어가지 않음</dd>
+        <dt>원인</dt><dd>같은 로고 이미지가 로딩 중에도 잠깐 표시되어, 아직 입력을 받지 않는 시점에 클릭이 발생</dd>
+        <dt>해결</dt><dd class="fix">화면이 실제로 바뀌는 것(<code>exists()</code>가 False가 될 때까지) 확인하며 반복 클릭하도록 변경</dd>
+      </dl>
+    </div>
+
+    <div class="trouble">
+      <h3><span class="no">04</span> 계정마다 다른 캐릭터 선택 화면</h3>
+      <dl class="trouble-row">
+        <dt>증상</dt><dd>캐릭터 초상화를 판단 기준으로 쓰면 계정 상태가 바뀔 때마다 템플릿이 깨짐</dd>
+        <dt>원인</dt><dd>캐릭터 목록·순서는 계정별로 다르지만, 화면 좌상단 타이틀 텍스트는 항상 고정</dd>
+        <dt>해결</dt><dd class="fix">계정 상태와 무관한 고정 UI 요소만 템플릿으로 사용하도록 설계 변경</dd>
+      </dl>
+    </div>
+
+    <div class="trouble">
+      <h3><span class="no">05</span> 위치에 따라 바뀌는 인게임 HUD</h3>
+      <dl class="trouble-row">
+        <dt>증상</dt><dd>인게임 판정용으로 캡처한 하단 상점 아이콘이 사냥터에서는 다른 아이콘으로 바뀌어 있음</dd>
+        <dt>원인</dt><dd>하단 액션 슬롯은 마을/사냥터 등 위치에 따라 표시되는 아이콘이 달라짐</dd>
+        <dt>해결</dt><dd class="fix">위치와 무관하게 항상 고정인 레벨 표시 + 상단 메뉴 아이콘, 두 개를 동시에 확인하도록 변경</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section>
+    <h2>결과</h2>
+    <p>
+      로딩·화면 전환 자체는 사람이 지켜봐도 비슷한 시간이 걸리기 때문에, 이 프로젝트의
+      가치는 "속도"보다 <strong>"사람이 화면 앞에 붙어있지 않아도 된다"</strong>는 데
+      있습니다. 스크립트를 실행만 시켜두면 그 사이 다른 작업을 할 수 있고, 몇 번을
+      반복 실행해도 사람마다 판단이 갈리지 않고 항상 같은 기준으로 결과가 나옵니다.
+    </p>
+    <ul class="results">
+      <li>실행 중 사람이 화면을 지켜볼 필요 없이, 종료 후 리포트만 확인하면 됨 (무인 실행)</li>
+      <li>계정 상태(보유 캐릭터, 위치)에 의존하지 않아 누가·언제 실행해도 동일한 기준으로 재현 가능</li>
+      <li>"눈으로 보기엔 정상 같았다"는 주관적 판단 대신, 스크린샷 포함 리포트라는 객관적 증거가 매번 남음</li>
+      <li>실행 이력이 Google Sheets에 누적되어, 팀원 누구나 "최근 몇 번 돌렸고 몇 번 통과했는지"를 시트만 보고 파악 가능</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>한계 및 향후 과제</h2>
+    <p>
+      아직 개인 학습 프로젝트 단계라 실무 투입까지는 다음 과제들이 남아 있습니다.
+    </p>
+    <ul class="gaps">
+      <li>지정된 UI 요소의 "존재 여부"만 확인하는 방식이라, 텍스처 미로딩·렌더링 깨짐 등 그 외 영역의 그래픽 결함은 감지하지 못함 — 이 부분은 이미지 비교 기반 UI 회귀 테스트로 보완이 필요</li>
+      <li>CI 파이프라인 미연동 — 현재는 사람이 직접 스크립트를 실행해야 하고, 실행 이력은 시트에 남지만 실패 시 Slack 등 즉시 알림 체계는 없음</li>
+      <li>단일 해상도·그래픽 설정에서만 검증 — 다른 해상도에서도 템플릿 매칭이 안정적인지는 미확인</li>
+      <li>스모크 테스트 시나리오 1종만 구현 — 반복 작업 검증 등으로 이어서 확장할 계획</li>
+      <li>관리자 권한 요구 사항 때문에 일반적인 CI 러너 환경에 그대로 얹기 어려움 — 별도 검토 필요</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>오딘: 발할라 라이징 QA 자동화 · 개인 프로젝트 · 2026.09</span>
+    <a href="https://github.com/woungjuNa/odin-qa-automation" target="_blank" rel="noopener">전체 코드 및 커밋 히스토리 보기 ↗</a>
+  </footer>
+
+</div>
