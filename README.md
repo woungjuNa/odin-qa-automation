@@ -63,16 +63,11 @@ python smoke_test.py
 
 ## 실행 이력 관리 (Google Sheets 연동)
 
-로컬 HTML 리포트는 실행할 때마다 새로 생성돼서, "이번 주에 몇 번 돌렸고 몇 번 통과했나" 같은
-히스토리를 보려면 매번 파일을 열어봐야 하는 불편함이 있었습니다. 그래서 실행 결과(시각,
-PASS/FAIL, 소요시간, 실패 사유)를 Google Sheets에도 자동으로 한 줄씩 기록하도록 연동했습니다.
+실행할 때마다 결과(시각, PASS/FAIL, 소요시간, 실패 사유)가 Google Sheets에도 한 줄씩
+자동으로 기록됩니다. HTML 리포트를 하나씩 열어보지 않아도, 팀원 누구나 시트만 보면
+"최근에 몇 번 돌렸고 몇 번 통과했는지" 히스토리를 한눈에 파악할 수 있습니다.
 
-- **실행 예시 시트**: https://docs.google.com/spreadsheets/d/1RNdHReJAfhZ5iX_mJwGQQOS6u0UJa835ScSjB9uwOnQ/edit?usp=sharing
-- **동작 방식**: Google Apps Script를 웹 앱으로 배포해서 웹훅 URL을 받고, `smoke_test.py`가 실행
-  종료 시(`finally` 블록) 그 URL로 결과를 POST 요청으로 전송 ([docs/google_apps_script.js](docs/google_apps_script.js))
-- 헤더는 굵게/색상 처리, PASS는 초록·FAIL은 빨강 배경으로 자동 표시되도록 스타일링
-- 웹훅 URL은 `smoke_test.air/sheets_config.py`(`.gitignore` 처리)에 개인적으로 보관 —
-  설정이 없으면 시트 전송 단계를 조용히 건너뛰고, 전송 실패도 테스트 자체를 실패시키지 않음
+**실행 예시 시트**: https://docs.google.com/spreadsheets/d/1RNdHReJAfhZ5iX_mJwGQQOS6u0UJa835ScSjB9uwOnQ/edit?usp=sharing
 
 ## 구현 중 발견한 문제와 해결
 
