@@ -17,7 +17,7 @@
 - 로그인은 웹사이트에서 클라이언트 실행 전에 끝나 있는 상태를 전제로 함 — 스크립트는 계정 정보를 다루지 않음
 - 오딘 클라이언트는 **창모드(windowed)**로 실행 — 전체화면 exclusive 모드는 Windows 화면 캡처 API로 스크린샷이 안 찍힐 수 있음
 - Python 3.13에서는 airtest의 numpy<2.0 의존성이 사전빌드 wheel을 제공하지 않아 컴파일 실패함 → **Python 3.12** 사용
-- 오딘은 안티치트 때문에 관리자 권한으로 실행됨 → 마우스 클릭 자동화(스크립트)도 **관리자 권한 터미널**에서 실행해야 함 (일반 권한에서는 Windows UIPI로 인해 `SetCursorPos`/`PostMessage`가 조용히 실패함)
+- 오딘은 안티치트 때문에 관리자 권한으로 실행됨 → 마우스 클릭 자동화(스크립트)도 **관리자 권한 터미널**에서 실행해야 함 (일반 권한에서는 Windows UIPI에 막혀 `SetCursorPos`/`PostMessage`가 에러도 없이 먹히지 않음)
 - 프로젝트 루트: `C:\Users\dndwn\Desktop\QA_AI`
 
 ---
