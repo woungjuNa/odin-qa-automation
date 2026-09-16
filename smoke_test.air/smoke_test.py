@@ -1,6 +1,7 @@
 # -*- encoding=utf8 -*-
 import os
 import re
+import time
 
 import win32con
 import win32gui
@@ -12,8 +13,11 @@ WINDOW_TITLE_RE = r"ODIN"
 
 SPLASH_LOGO = Template(r"splash_logo.png")
 CHARACTER_SELECT_TITLE = Template(r"character_select_title.png")
+PLAY_BUTTON = Template(r"play_button.png")
+INGAME_HUD = Template(r"ingame_hud.png")
+INGAME_TOPMENU = Template(r"ingame_topmenu.png")
 
-reporter = Reporter("오딘 스모크 테스트: 실행 → 스플래시 통과 → 캐릭터 선택 화면")
+reporter = Reporter("오딘 스모크 테스트: 실행 → 스플래시 통과 → 캐릭터 선택 → 인게임 진입")
 
 
 def run_smoke_test():
@@ -34,11 +38,33 @@ def run_smoke_test():
     reporter.step("스플래시 통과 완료", screenshot=_snap("02_splash_passed"))
 
     wait(CHARACTER_SELECT_TITLE, timeout=30)
+    reporter.step("캐릭터 선택 화면 진입 확인됨", screenshot=_snap("03_character_select"))
+
+    for attempt in range(10):
+        if not exists(CHARACTER_SELECT_TITLE):
+            break
+        touch(PLAY_BUTTON)
+        sleep(1)
+    else:
+        raise TargetNotFoundError("게임하기 버튼을 10번 눌렀지만 캐릭터 선택 화면을 벗어나지 못함")
+    reporter.step("게임하기 클릭됨 (로딩 화면 진입 대기 중)", screenshot=_snap("04_play_clicked"))
+
+    _wait_all([INGAME_HUD, INGAME_TOPMENU], timeout=60)
     reporter.step(
-        "캐릭터 선택 화면 진입 확인됨",
+        "인게임 진입 확인됨 (AUTO 버튼 + 상단 메뉴 아이콘 모두 확인)",
         status="pass",
-        screenshot=_snap("03_character_select"),
+        screenshot=_snap("05_ingame"),
     )
+
+
+def _wait_all(templates, timeout):
+    """여러 템플릿이 모두 화면에 나타날 때까지 기다린다 (둘 다 있어야 통과, 오탐 방지용)."""
+    start = time.time()
+    while time.time() - start < timeout:
+        if all(exists(t) for t in templates):
+            return
+        sleep(0.5)
+    raise TargetNotFoundError(f"{timeout}초 안에 모든 템플릿이 동시에 발견되지 않음")
 
 
 def _bring_odin_to_front():
