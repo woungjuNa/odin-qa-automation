@@ -1,5 +1,4 @@
 venv/
-config.py
 smoke_test.air/log/
 smoke_test.air/report.html
 __pycache__/
