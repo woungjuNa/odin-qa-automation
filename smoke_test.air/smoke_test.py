@@ -32,7 +32,20 @@ def _wait_named(template, timeout, step_name):
         )
 
 
+def _clear_log_dir():
+    """이전 실행에서 쌓인 로그(특히 Airtest가 매 동작마다 자동으로 남기는 타임스탬프
+    jpg 파일들)를 지우고 새로 시작한다. 안 지우면 실행할수록 용량이 계속 늘어난다."""
+    log_dir = os.path.join(os.path.dirname(__file__), "log")
+    if os.path.isdir(log_dir):
+        for name in os.listdir(log_dir):
+            path = os.path.join(log_dir, name)
+            if os.path.isfile(path):
+                os.remove(path)
+    os.makedirs(log_dir, exist_ok=True)
+
+
 def run_smoke_test():
+    _clear_log_dir()
     auto_setup(__file__, logdir=True)
     connect_device(f"Windows:///?title_re={WINDOW_TITLE_RE}")
     reporter.step("오딘 창에 연결됨")
