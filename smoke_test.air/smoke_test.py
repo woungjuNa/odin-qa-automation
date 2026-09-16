@@ -111,7 +111,10 @@ def _bring_odin_to_front():
         return
     hwnd = hwnds[0]
     win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-    win32gui.SetForegroundWindow(hwnd)
+    try:
+        win32gui.SetForegroundWindow(hwnd)
+    except Exception:
+        pass  # Windows가 포커스 전환을 거부할 때가 있음 — 실패해도 스크린샷 자체는 계속 시도
     sleep(0.3)
 
 
