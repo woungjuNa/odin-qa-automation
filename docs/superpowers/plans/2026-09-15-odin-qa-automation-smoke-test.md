@@ -17,6 +17,7 @@
 - 로그인은 웹사이트에서 클라이언트 실행 전에 끝나 있는 상태를 전제로 함 — 스크립트는 계정 정보를 다루지 않음
 - 오딘 클라이언트는 **창모드(windowed)**로 실행 — 전체화면 exclusive 모드는 Windows 화면 캡처 API로 스크린샷이 안 찍힐 수 있음
 - Python 3.13에서는 airtest의 numpy<2.0 의존성이 사전빌드 wheel을 제공하지 않아 컴파일 실패함 → **Python 3.12** 사용
+- 오딘은 안티치트 때문에 관리자 권한으로 실행됨 → 마우스 클릭 자동화(스크립트)도 **관리자 권한 터미널**에서 실행해야 함 (일반 권한에서는 Windows UIPI로 인해 `SetCursorPos`/`PostMessage`가 조용히 실패함)
 - 프로젝트 루트: `C:\Users\dndwn\Desktop\QA_AI`
 
 ---
@@ -222,7 +223,7 @@ git commit -m "feat: capture template images for smoke test"
 - Consumes: Task 3의 템플릿 이미지 2개 (`smoke_test.air/splash_logo.png`, `character_select_title.png`)
 - Produces: `run_smoke_test()` 함수 — 실행 시 성공하면 콘솔에 `[PASS]` 출력, 실패 시 예외 발생. `smoke_test.air/log/` 폴더에 실행 로그와 스크린샷 기록
 
-- [ ] **Step 1: 연결 코드 작성 (스크립트 뼈대)**
+- [x] **Step 1: 연결 코드 작성 (스크립트 뼈대)**
 
 `smoke_test.air/smoke_test.py` 생성 (Task 3에서 확인한 창 제목 "ODIN" 사용):
 
@@ -244,7 +245,7 @@ if __name__ == "__main__":
     run_smoke_test()
 ```
 
-- [ ] **Step 2: 실행해서 연결만 확인**
+- [x] **Step 2: 실행해서 연결만 확인**
 
 오딘 클라이언트를 실행해둔 상태에서, VS Code 터미널(가상환경 활성화된 상태)에서:
 
@@ -255,7 +256,7 @@ python smoke_test.py
 
 기대 결과: 콘솔에 `[STEP] 오딘 창에 연결됨` 출력.
 
-- [ ] **Step 3: 스플래시 통과 로직 추가**
+- [x] **Step 3: 스플래시 통과 로직 추가**
 
 `run_smoke_test()` 함수를 아래로 교체:
 
@@ -266,11 +267,23 @@ def run_smoke_test():
 
     print("[STEP] 스플래시 화면 대기 중...")
     wait(SPLASH_LOGO, timeout=15)
-    touch(SPLASH_LOGO)
+
+    print("[STEP] 스플래시 화면 클릭 시도 (화면이 넘어갈 때까지 반복)...")
+    for attempt in range(15):
+        if not exists(SPLASH_LOGO):
+            break
+        touch(SPLASH_LOGO)
+        sleep(1)
+    else:
+        raise TargetNotFoundError("스플래시 화면을 15번 클릭했지만 다음 화면으로 넘어가지 않음")
     print("[STEP] 스플래시 통과 완료")
 ```
 
-- [ ] **Step 4: 실행해서 스플래시 단계까지 확인**
+**(실행 노트: 처음엔 `touch(SPLASH_LOGO)` 한 번만 호출했는데, 실제 게임에선 로고가 뜨는 로딩 화면과 "터치해주세요" 인터랙티브 화면이 같은 이미지로 보여서 로딩 중에 클릭이 씹히는 문제가 있었음. 화면이 실제로 넘어갈 때까지(`exists()`가 False가 될 때까지) 반복 클릭하는 방식으로 수정해서 해결함.)**
+
+**(실행 노트 — 관리자 권한: 처음 실행했을 때 `touch()` 단계에서 `pywintypes.error: SetCursorPos` 에러가 발생함. 오딘이 안티치트 때문에 관리자 권한으로 실행 중이라, 일반 권한 터미널에서는 Windows UIPI가 커서 제어/메시지 전달을 막았기 때문. VS Code를 관리자 권한으로 재실행해서 해결함.)**
+
+- [x] **Step 4: 실행해서 스플래시 단계까지 확인**
 
 오딘을 스플래시 화면 상태로 재실행한 뒤:
 
@@ -280,7 +293,7 @@ python smoke_test.py
 
 기대 결과: `[STEP] 스플래시 통과 완료`까지 출력되고 실제로 화면이 클릭되어 다음 화면으로 넘어감. `wait` 단계에서 타임아웃 예외가 나면 `splash_logo.png` 템플릿이 현재 화면과 맞는지 확인.
 
-- [ ] **Step 5: 캐릭터 선택 화면 진입 확인 로직 추가**
+- [x] **Step 5: 캐릭터 선택 화면 진입 확인 로직 추가**
 
 함수를 최종 버전으로 교체:
 
@@ -299,7 +312,15 @@ def run_smoke_test():
 
     print("[STEP] 스플래시 화면 대기 중...")
     wait(SPLASH_LOGO, timeout=15)
-    touch(SPLASH_LOGO)
+
+    print("[STEP] 스플래시 화면 클릭 시도 (화면이 넘어갈 때까지 반복)...")
+    for attempt in range(15):
+        if not exists(SPLASH_LOGO):
+            break
+        touch(SPLASH_LOGO)
+        sleep(1)
+    else:
+        raise TargetNotFoundError("스플래시 화면을 15번 클릭했지만 다음 화면으로 넘어가지 않음")
     print("[STEP] 스플래시 통과 완료")
 
     print("[STEP] 캐릭터 선택 화면 진입 대기 중...")
@@ -311,7 +332,7 @@ if __name__ == "__main__":
     run_smoke_test()
 ```
 
-- [ ] **Step 6: 전체 실행 확인**
+- [x] **Step 6: 전체 실행 확인**
 
 오딘을 처음 상태(스플래시)로 재실행 후:
 
@@ -321,7 +342,7 @@ python smoke_test.py
 
 기대 결과: `[PASS] 스모크 테스트 성공: 캐릭터 선택 화면 진입 확인됨`까지 콘솔에 출력됨.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```
 cd ..
