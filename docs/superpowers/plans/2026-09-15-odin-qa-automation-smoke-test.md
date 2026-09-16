@@ -28,33 +28,10 @@
 
 **산출물:** 이후 모든 작업에서 사용할 Python 실행 환경과 코드 에디터
 
-- [x] **Step 1: Python 설치**
+- [x] **Step 1: Python, VS Code 설치 및 확인**
 
-https://www.python.org/downloads/ 접속 → "Download Python 3.x.x" 클릭 → 설치 파일 실행.
-
-설치 화면 **맨 아래 "Add python.exe to PATH" 체크박스를 반드시 체크**한 후 "Install Now" 클릭. (체크 안 하면 이후 명령어들이 동작하지 않음)
-
-- [x] **Step 2: 설치 확인**
-
-명령 프롬프트(cmd) 또는 PowerShell을 새로 열고 실행:
-
-```
-python --version
-```
-
-기대 결과: `Python 3.x.x` 형태로 버전이 출력됨. "python은 내부 또는 외부 명령이 아닙니다" 오류가 나오면 PATH 설정이 안 된 것이므로, 설치 프로그램을 다시 실행해서 "Modify" → "Add to PATH" 체크 후 재설치.
-
-- [x] **Step 3: VS Code 설치**
-
-https://code.visualstudio.com 접속 → 다운로드 → 설치 파일 실행 (기본 옵션으로 계속 진행).
-
-- [x] **Step 4: VS Code Python 확장 설치**
-
-VS Code 실행 → 왼쪽 아이콘 모음에서 Extensions 아이콘 클릭 (또는 `Ctrl+Shift+X`) → 검색창에 "Python" 입력 → 게시자가 **Microsoft**인 확장 설치.
-
-- [x] **Step 5: 확인**
-
-VS Code에서 `Ctrl+`` `` (백틱)으로 통합 터미널을 열고 `python --version`을 다시 실행해 같은 버전이 나오는지 확인.
+python.org에서 Python 설치(PATH 등록 옵션 포함), code.visualstudio.com에서 VS Code 설치,
+VS Code에 Python 확장(Microsoft 게시) 추가. `python --version`으로 정상 인식 확인.
 
 ---
 
@@ -401,61 +378,11 @@ git commit -m "feat: replace Airtest's default report with a custom clean HTML r
 - Consumes: Task 1~5의 전체 결과물
 - Produces: 포트폴리오/면접에서 프로젝트를 설명할 때 참고할 문서
 
-- [ ] **Step 1: README.md 작성**
+- [x] **Step 1: README.md 작성**
 
-```markdown
-# 오딘: 발할라 라이징 QA 자동화 - 스모크 테스트
-
-모바일 MMORPG QA 경력을 바탕으로, 오딘: 발할라 라이징 PC 클라이언트를 대상으로
-"실행 → 스플래시 통과 → 캐릭터 선택 화면 진입"을 자동으로 검증하는 스모크 테스트 시스템입니다.
-
-## 배경
-
-- 실제 게임 QA 실무 경험을 살려, 반복적으로 수행하던 스모크 테스트를 자동화
-- 안드로이드 단말기 없이 PC 클라이언트 기반으로 구현
-- 오딘은 로그인을 웹사이트에서 먼저 처리하고 클라이언트를 실행하는 구조라, 클라이언트 내부에는
-  별도 로그인 화면이 없음 — 웹 로그인 자동화는 계정 비밀번호 노출 위험이 있어 범위에서 제외하고,
-  클라이언트가 정상 실행되는지(스플래시 → 캐릭터 선택 화면)를 검증 대상으로 삼음
-- 캐릭터 선택 후 인게임 진입은 계정마다 보유 캐릭터가 달라 재현성이 떨어져 Phase 1 범위 밖으로 둠
-
-## 기술 스택
-
-- Python 3.12 (Airtest가 의존하는 numpy<2.0이 3.13용 사전빌드 wheel을 제공하지 않아 3.12 사용)
-- Airtest (넷이즈의 게임 자동화 오픈소스 프레임워크) — 이미지 템플릿 매칭 기반 화면 인식
-- AirtestIDE — 템플릿 이미지 캡처 및 연결 테스트용 GUI 툴
-- 직접 구현한 HTML 리포트 생성기 (`report.py`) — Airtest 기본 리포트 대신 가독성 있는 자체 리포트 제작
-
-## 동작 방식
-
-1. 오딘 PC 클라이언트 창에 연결
-2. 스플래시 화면 인식 및 통과 (로딩 중 클릭이 씹히는 경우를 대비해, 화면이 넘어갈 때까지 반복 클릭)
-3. 캐릭터 선택 화면 진입 여부를 고정 UI 요소(화면 제목) 인식으로 검증
-4. 각 단계마다 오딘 창을 맨 앞으로 가져온 뒤 스크린샷 촬영
-5. 성공/실패와 무관하게 직접 만든 리포터(`report.py`)로 HTML 리포트 자동 생성
-
-## 실행 방법
-
-오딘이 안티치트 때문에 관리자 권한으로 실행되므로, 아래 명령어도 **관리자 권한 터미널**에서
-실행해야 합니다 (그렇지 않으면 Windows 권한 격리로 마우스 클릭이 조용히 실패함).
-
-\`\`\`
-venv\\Scripts\\activate
-cd smoke_test.air
-python smoke_test.py
-\`\`\`
-
-실행 후 `smoke_test.air/log/report.html`을 열면 결과를 확인할 수 있습니다.
-
-## 설계 문서
-
-전체 설계 배경과 의사결정 과정은 [docs/superpowers/specs/2026-09-15-odin-qa-automation-design.md](docs/superpowers/specs/2026-09-15-odin-qa-automation-design.md) 참고.
-
-## 향후 확장 계획
-
-- 반복 작업(일일퀘스트, 자동전투) 검증 자동화
-- UI 회귀 테스트 (이미지 비교 기반)
-- 다른 게임/플랫폼으로 확장
-```
+프로젝트 개요, 배경, 기술 스택, 동작 방식, 실행 방법, 구현 중 발견한 문제와 해결, 향후 확장
+계획을 담아 작성. (이후 Phase 1이 인게임 진입까지 확장되면서 README 내용도 함께 갱신됨 —
+최신 내용은 [README.md](../../../README.md) 참고)
 
 - [x] **Step 2: Commit**
 
