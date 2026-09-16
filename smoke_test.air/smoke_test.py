@@ -68,14 +68,14 @@ def run_smoke_test():
     _wait_named(CHARACTER_SELECT_TITLE, 30, "캐릭터 선택")
     reporter.step("캐릭터 선택 화면 진입 확인됨", screenshot=_snap("03_character_select"))
 
-    for attempt in range(10):
+    for attempt in range(20):
         if not exists(CHARACTER_SELECT_TITLE):
             break
         try:
             touch(PLAY_BUTTON)
         except TargetNotFoundError:
             break
-        sleep(1)
+        sleep(0.4)
     else:
         raise Exception("게임하기 버튼을 10번 눌렀지만 캐릭터 선택 화면을 벗어나지 못했습니다.")
     reporter.step("게임하기 클릭됨 (로딩 화면 진입 대기 중)", screenshot=_snap("04_play_clicked"))
