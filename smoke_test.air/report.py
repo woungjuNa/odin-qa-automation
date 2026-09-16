@@ -91,6 +91,36 @@ _TEMPLATE = """<!DOCTYPE html>
     border: 1px solid var(--border);
     display: block;
   }}
+  .compare {{
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }}
+  .compare figure {{
+    margin: 0;
+    flex: 1;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }}
+  .compare img {{
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: block;
+  }}
+  .compare figcaption {{
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+  }}
+  .diff-percent {{
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+  }}
 </style>
 </head>
 <body>
@@ -125,13 +155,19 @@ class Reporter:
         self.started_at = datetime.datetime.now()
         self.steps = []
 
-    def step(self, name, status="info", screenshot=None):
-        """단계를 기록한다. status: info / pass / fail. screenshot은 log 폴더 기준 상대 파일명."""
+    def step(self, name, status="info", screenshot=None, compare=None, diff_percent=None):
+        """단계를 기록한다. status: info / pass / fail.
+        screenshot: 단일 이미지 파일명 (log 폴더 기준 상대 경로)
+        compare: [(caption, 파일명), ...] 형태로 여러 이미지를 나란히 표시 (기준/현재/차이 비교용)
+        diff_percent: UI 회귀 테스트에서 계산한 차이 비율(%)
+        """
         self.steps.append({
             "name": name,
             "status": status,
             "time": datetime.datetime.now().strftime("%H:%M:%S"),
             "screenshot": screenshot,
+            "compare": compare,
+            "diff_percent": diff_percent,
         })
         print(f"[{_STATUS_LABEL.get(status, 'STEP')}] {name}")
 
@@ -154,7 +190,16 @@ class Reporter:
     @staticmethod
     def _render_step(s):
         image_html = ""
-        if s["screenshot"]:
+        if s.get("compare"):
+            figures = "".join(
+                f'<figure><img src="{html.escape(path)}" alt="{html.escape(caption)}">'
+                f'<figcaption>{html.escape(caption)}</figcaption></figure>'
+                for caption, path in s["compare"]
+            )
+            image_html = f'<div class="compare">{figures}</div>'
+            if s.get("diff_percent") is not None:
+                image_html += f'<div class="diff-percent">차이 비율: {s["diff_percent"]:.2f}%</div>'
+        elif s["screenshot"]:
             image_html = f'<img src="{html.escape(s["screenshot"])}" alt="screenshot">'
         return _STEP_TEMPLATE.format(
             status=s["status"],
