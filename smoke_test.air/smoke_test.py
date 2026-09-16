@@ -98,12 +98,38 @@ def _snap(name):
     return filename
 
 
+def _send_to_sheet(passed, error_message=""):
+    """sheets_config.py가 있으면, 실행 결과 한 줄을 Google Sheets 웹훅으로 전송한다.
+    설정 파일이 없거나 전송이 실패해도 테스트 자체는 실패시키지 않는다."""
+    try:
+        from sheets_config import WEBHOOK_URL
+    except ImportError:
+        return
+    import datetime as _dt
+    import requests
+
+    duration = (_dt.datetime.now() - reporter.started_at).total_seconds()
+    payload = {
+        "timestamp": _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "result": "PASS" if passed else "FAIL",
+        "duration": round(duration, 1),
+        "error": error_message,
+    }
+    try:
+        requests.post(WEBHOOK_URL, json=payload, timeout=10)
+        print("[SHEET] Google Sheets에 결과 전송 완료")
+    except Exception as e:
+        print(f"[SHEET] Google Sheets 전송 실패 (무시하고 계속): {e}")
+
+
 if __name__ == "__main__":
     passed = False
+    error_message = ""
     try:
         run_smoke_test()
         passed = True
     except Exception as e:
+        error_message = str(e)
         reporter.step(f"스모크 테스트 실패: {e}", status="fail", screenshot=_snap("99_failure"))
         raise
     finally:
@@ -111,3 +137,4 @@ if __name__ == "__main__":
         os.makedirs(log_dir, exist_ok=True)
         reporter.render(os.path.join(log_dir, "report.html"), passed)
         print(f"[REPORT] {os.path.join(log_dir, 'report.html')}")
+        _send_to_sheet(passed, error_message)
