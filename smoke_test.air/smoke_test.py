@@ -21,13 +21,14 @@ reporter = Reporter("오딘 스모크 테스트: 실행 → 스플래시 통과 
 
 
 def _wait_named(template, timeout, step_name):
-    """wait()를 감싸서, 실패 시 Airtest 원문 대신 한글로 어떤 단계에서 실패했는지 알려준다."""
+    """wait()를 감싸서, 실패 시 Airtest 원문 대신 한글로 어떤 단계에서 실패했는지 알려준다.
+    일반 Exception을 쓰는 이유: TargetNotFoundError는 메시지를 따옴표로 감싸서 출력하기 때문."""
     try:
         wait(template, timeout=timeout)
     except TargetNotFoundError:
-        raise TargetNotFoundError(
-            f"{step_name} 화면이 {timeout}초 안에 나타나지 않음 "
-            f"(오딘이 해당 화면 상태로 켜져 있는지 확인 필요)"
+        raise Exception(
+            f"{step_name} 화면이 {timeout}초 안에 나타나지 않았습니다. "
+            f"오딘을 {step_name} 화면 상태로 띄워두고 다시 실행해주세요."
         )
 
 
@@ -48,7 +49,7 @@ def run_smoke_test():
             break  # exists()와 touch() 사이에 화면이 이미 넘어간 경우 — 정상
         sleep(1)
     else:
-        raise TargetNotFoundError("스플래시 화면을 15번 클릭했지만 다음 화면으로 넘어가지 않음")
+        raise Exception("스플래시 화면을 15번 클릭했지만 다음 화면으로 넘어가지 않았습니다.")
     reporter.step("스플래시 통과 완료", screenshot=_snap("02_splash_passed"))
 
     _wait_named(CHARACTER_SELECT_TITLE, 30, "캐릭터 선택")
@@ -63,7 +64,7 @@ def run_smoke_test():
             break
         sleep(1)
     else:
-        raise TargetNotFoundError("게임하기 버튼을 10번 눌렀지만 캐릭터 선택 화면을 벗어나지 못함")
+        raise Exception("게임하기 버튼을 10번 눌렀지만 캐릭터 선택 화면을 벗어나지 못했습니다.")
     reporter.step("게임하기 클릭됨 (로딩 화면 진입 대기 중)", screenshot=_snap("04_play_clicked"))
 
     _wait_all([INGAME_HUD, INGAME_TOPMENU], timeout=60)
@@ -81,7 +82,7 @@ def _wait_all(templates, timeout):
         if all(exists(t) for t in templates):
             return
         sleep(0.5)
-    raise TargetNotFoundError(f"{timeout}초 안에 모든 템플릿이 동시에 발견되지 않음")
+    raise Exception(f"인게임 화면(AUTO 버튼, 상단 메뉴)이 {timeout}초 안에 모두 나타나지 않았습니다.")
 
 
 def _bring_odin_to_front():
