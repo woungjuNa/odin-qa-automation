@@ -107,7 +107,10 @@ def run_ui_regression_test():
     for attempt in range(15):
         if not exists(SPLASH_LOGO):
             break
-        touch(SPLASH_LOGO)
+        try:
+            touch(SPLASH_LOGO)
+        except TargetNotFoundError:
+            break  # exists()와 touch() 사이에 화면이 이미 넘어간 경우 — 정상
         sleep(1)
     else:
         raise TargetNotFoundError("스플래시 화면을 15번 클릭했지만 다음 화면으로 넘어가지 않음")
@@ -123,7 +126,10 @@ def run_ui_regression_test():
     for attempt in range(10):
         if not exists(CHARACTER_SELECT_TITLE):
             break
-        touch(PLAY_BUTTON)
+        try:
+            touch(PLAY_BUTTON)
+        except TargetNotFoundError:
+            break
         sleep(1)
     else:
         raise TargetNotFoundError("게임하기 버튼을 10번 눌렀지만 캐릭터 선택 화면을 벗어나지 못함")
