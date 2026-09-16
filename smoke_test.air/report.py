@@ -135,8 +135,12 @@ class Reporter:
         })
         print(f"[{_STATUS_LABEL.get(status, 'STEP')}] {name}")
 
+    def duration_seconds(self):
+        """시작 시점부터 지금까지의 소요시간(초). 리포트와 시트 기록이 같은 값을 쓰도록 한 곳에 둔다."""
+        return (datetime.datetime.now() - self.started_at).total_seconds()
+
     def render(self, output_path, passed):
-        duration = (datetime.datetime.now() - self.started_at).total_seconds()
+        duration = self.duration_seconds()
         steps_html = "\n".join(self._render_step(s) for s in self.steps)
         result_class = "pass" if passed else "fail"
         result_text = "테스트 통과" if passed else "테스트 실패"
