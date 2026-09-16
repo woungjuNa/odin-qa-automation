@@ -138,13 +138,13 @@ QA_AI/
 ├── docs/
 │   ├── google_apps_script.js       # Google Sheets에 붙여넣는 Apps Script 코드
 │   ├── screenshots/                # README용 스크린샷
-│   └── superpowers/                # 설계 문서 및 구현 계획
+│   └── design/                     # 설계 문서
 └── requirements.txt
 ```
 
 ## 설계 문서
 
-설계 배경과 의사결정 과정은 [docs/superpowers/specs/2026-09-15-odin-qa-automation-design.md](docs/superpowers/specs/2026-09-15-odin-qa-automation-design.md)에
+설계 배경과 의사결정 과정은 [docs/design/2026-09-15-odin-qa-automation-design.md](docs/design/2026-09-15-odin-qa-automation-design.md)에
 정리해 두었습니다.
 
 ## 향후 확장 계획
