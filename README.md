@@ -22,7 +22,6 @@
 
 - Python 3.12
 - Airtest — 이미지 템플릿 매칭 기반 화면 인식 자동화 프레임워크
-- 직접 구현한 HTML 리포트 생성기 (`report.py`)
 - Google Apps Script — 실행 이력을 Google Sheets에 자동 기록하는 웹훅
 - AirtestIDE (개발 중 템플릿 캡처용, 실행 시에는 불필요)
 
