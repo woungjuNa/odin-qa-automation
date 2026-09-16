@@ -20,12 +20,23 @@ INGAME_TOPMENU = Template(r"ingame_topmenu.png")
 reporter = Reporter("오딘 스모크 테스트: 실행 → 스플래시 통과 → 캐릭터 선택 → 인게임 진입")
 
 
+def _wait_named(template, timeout, step_name):
+    """wait()를 감싸서, 실패 시 Airtest 원문 대신 한글로 어떤 단계에서 실패했는지 알려준다."""
+    try:
+        wait(template, timeout=timeout)
+    except TargetNotFoundError:
+        raise TargetNotFoundError(
+            f"{step_name} 화면이 {timeout}초 안에 나타나지 않음 "
+            f"(오딘이 해당 화면 상태로 켜져 있는지 확인 필요)"
+        )
+
+
 def run_smoke_test():
     auto_setup(__file__, logdir=True)
     connect_device(f"Windows:///?title_re={WINDOW_TITLE_RE}")
     reporter.step("오딘 창에 연결됨")
 
-    wait(SPLASH_LOGO, timeout=15)
+    _wait_named(SPLASH_LOGO, 15, "스플래시")
     reporter.step("스플래시 화면 감지됨", screenshot=_snap("01_splash"))
 
     for attempt in range(15):
@@ -40,7 +51,7 @@ def run_smoke_test():
         raise TargetNotFoundError("스플래시 화면을 15번 클릭했지만 다음 화면으로 넘어가지 않음")
     reporter.step("스플래시 통과 완료", screenshot=_snap("02_splash_passed"))
 
-    wait(CHARACTER_SELECT_TITLE, timeout=30)
+    _wait_named(CHARACTER_SELECT_TITLE, 30, "캐릭터 선택")
     reporter.step("캐릭터 선택 화면 진입 확인됨", screenshot=_snap("03_character_select"))
 
     for attempt in range(10):
