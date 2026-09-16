@@ -457,7 +457,7 @@ python smoke_test.py
 - 다른 게임/플랫폼으로 확장
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```
 git add README.md
