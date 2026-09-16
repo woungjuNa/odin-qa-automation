@@ -82,7 +82,7 @@ def run_smoke_test():
 
     _wait_all([INGAME_HUD, INGAME_TOPMENU], timeout=60)
     reporter.step(
-        "인게임 진입 확인됨 (AUTO 버튼 + 상단 메뉴 아이콘 모두 확인)",
+        "인게임 진입 확인됨 (레벨 표시 + 상단 메뉴 아이콘 모두 확인)",
         status="pass",
         screenshot=_snap("05_ingame"),
     )
@@ -95,7 +95,7 @@ def _wait_all(templates, timeout):
         if all(exists(t) for t in templates):
             return
         sleep(0.5)
-    raise Exception(f"인게임 화면(AUTO 버튼, 상단 메뉴)이 {timeout}초 안에 모두 나타나지 않았습니다.")
+    raise Exception(f"인게임 화면(레벨 표시, 상단 메뉴)이 {timeout}초 안에 모두 나타나지 않았습니다.")
 
 
 def _bring_odin_to_front():
