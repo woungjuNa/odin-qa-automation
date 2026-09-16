@@ -20,6 +20,11 @@ function doPost(e) {
   var newRow = sheet.getLastRow();
   colorResultCell(sheet, newRow, data.result);
 
+  // 실행 시각, 소요시간, 실패 사유는 가운데 맞춤
+  sheet.getRange(newRow, 1).setHorizontalAlignment("center");
+  sheet.getRange(newRow, 3).setHorizontalAlignment("center");
+  sheet.getRange(newRow, 4).setHorizontalAlignment("center");
+
   return ContentService.createTextOutput(JSON.stringify({ status: "ok" }))
     .setMimeType(ContentService.MimeType.JSON);
 }
