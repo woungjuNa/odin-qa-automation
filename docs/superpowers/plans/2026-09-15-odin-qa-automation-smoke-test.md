@@ -352,72 +352,43 @@ git commit -m "feat: implement smoke test script (splash -> character select scr
 
 ---
 
-## Task 5: 실패 상황 처리 + HTML 리포트 생성 확인
+## Task 5: 실패 상황 처리 + 커스텀 HTML 리포트
 
 **Files:**
+- Create: `smoke_test.air/report.py`
 - Modify: `smoke_test.air/smoke_test.py`
 
 **Interfaces:**
 - Consumes: Task 4의 `run_smoke_test()`
-- Produces: 실패 시에도 스크린샷이 남는 에러 처리, `smoke_test.air/log/` 기반 `report.html`
+- Produces: `Reporter` 클래스 (`step()`, `render()`), 실패 시에도 스크린샷이 남는 에러 처리, `smoke_test.air/log/report.html`
 
-- [ ] **Step 1: 실패 시 스크린샷 저장 로직 추가**
+**(실행 노트: 계획 원안은 Airtest 기본 `airtest report` CLI 명령으로 리포트를 생성하는 것이었으나, 실제로 보니 가독성이 떨어지고 디자인이 정리되어 있지 않아 포트폴리오용으로 부족했음. 대신 `report.py`에 직접 만든 `Reporter` 클래스로, 단계별 결과(이름/상태/스크린샷)를 모아 깔끔한 단일 HTML 페이지를 렌더링하는 방식으로 변경함. `smoke_test.py`도 각 단계마다 `reporter.step(...)`을 호출하고 스크린샷을 남기도록 재구성함. 스크린샷 촬영 전에는 다른 창이 오딘 위에 겹쳐서 찍히는 문제가 있어, `_bring_odin_to_front()`로 오딘 창을 맨 앞으로 가져온 뒤 캡처하도록 처리함.)**
 
-`smoke_test.py`의 실행부를 아래로 교체:
+- [x] **Step 1: `report.py`에 `Reporter` 클래스 작성**
 
-```python
-if __name__ == "__main__":
-    try:
-        run_smoke_test()
-    except Exception as e:
-        print(f"[FAIL] 스모크 테스트 실패: {e}")
-        snapshot(filename="failure.png", msg="테스트 실패 시점 화면")
-        raise
-```
+`Reporter(title)`로 생성 → `reporter.step(name, status="info"|"pass"|"fail", screenshot=파일명)`으로 단계를 기록 → `reporter.render(output_path, passed)`로 카드 스타일 HTML(배지, 색상, 스크린샷 인라인)을 생성.
 
-- [ ] **Step 2: 의도적으로 실패시켜 동작 확인**
+- [x] **Step 2: `smoke_test.py`를 Reporter 사용하도록 재구성**
 
-`SPLASH_LOGO = Template(r"splash_logo.png")` 줄을 일시적으로 `SPLASH_LOGO = Template(r"nonexistent.png")`로 바꾸고 실행:
+각 단계(연결/스플래시 감지/스플래시 통과/캐릭터 선택 확인)마다 `reporter.step(...)` 호출 + `_snap()`으로 스크린샷 저장. 실패 시 `except` 블록에서 `status="fail"`로 기록. `finally` 블록에서 항상 `reporter.render(...)` 호출해 성공/실패 관계없이 리포트가 남도록 함.
 
-```
-python smoke_test.py
-```
+- [x] **Step 3: 의도적으로 실패시켜 동작 확인**
 
-기대 결과: `[FAIL] 스모크 테스트 실패: ...` 출력되고, `smoke_test.air/log/` 폴더 안에 `failure.png`가 저장됨.
+`SPLASH_LOGO = Template(r"splash_logo.png")` 줄을 일시적으로 `SPLASH_LOGO = Template(r"nonexistent.png")`로 바꾸고 실행 → `log/report.html`에 "테스트 실패" 배지와 FAIL 단계가 표시되는지 확인 → 원복.
 
-- [ ] **Step 3: 원복**
+- [x] **Step 4: 정상 실행 + 리포트 확인**
 
-`SPLASH_LOGO` 줄을 다시 `Template(r"splash_logo.png")`로 되돌리기.
+오딘을 스플래시 상태로 재실행 후 `python smoke_test.py` → `log/report.html`을 브라우저로 열어 "테스트 통과" 배지, 4단계, 스크린샷 3장이 모두 깔끔하게(다른 창 안 겹치고) 표시되는지 확인.
 
-- [ ] **Step 4: 정상 실행으로 로그 남기기**
-
-오딘을 처음 상태로 재실행 후:
-
-```
-python smoke_test.py
-```
-
-성공까지 확인.
-
-- [ ] **Step 5: HTML 리포트 생성**
-
-```
-airtest report smoke_test.py --log_root log --outfile log/report.html
-```
-
-- [ ] **Step 6: 리포트 확인**
-
-파일 탐색기에서 `smoke_test.air/log/report.html`을 더블클릭해 브라우저로 열기. 단계별 스크린샷과 성공/실패 로그가 표시되는지 확인.
-
-- [ ] **Step 7: Commit**
+- [x] **Step 5: Commit**
 
 ```
 cd ..
-git add smoke_test.air/smoke_test.py
-git commit -m "feat: add failure screenshot handling to smoke test"
+git add smoke_test.air/report.py smoke_test.air/smoke_test.py .gitignore
+git commit -m "feat: replace Airtest's default report with a custom clean HTML report"
 ```
 
-(`log/`, `report.html`은 `.gitignore`에 있어 커밋되지 않음 — 실행할 때마다 로컬에서 새로 생성됨)
+(`log/`은 `.gitignore`에 있어 커밋되지 않음 — 실행할 때마다 로컬에서 새로 생성됨)
 
 ---
 
@@ -452,22 +423,28 @@ git commit -m "feat: add failure screenshot handling to smoke test"
 - Python 3.12 (Airtest가 의존하는 numpy<2.0이 3.13용 사전빌드 wheel을 제공하지 않아 3.12 사용)
 - Airtest (넷이즈의 게임 자동화 오픈소스 프레임워크) — 이미지 템플릿 매칭 기반 화면 인식
 - AirtestIDE — 템플릿 이미지 캡처 및 연결 테스트용 GUI 툴
+- 직접 구현한 HTML 리포트 생성기 (`report.py`) — Airtest 기본 리포트 대신 가독성 있는 자체 리포트 제작
 
 ## 동작 방식
 
 1. 오딘 PC 클라이언트 창에 연결
-2. 스플래시 화면 인식 및 통과
+2. 스플래시 화면 인식 및 통과 (로딩 중 클릭이 씹히는 경우를 대비해, 화면이 넘어갈 때까지 반복 클릭)
 3. 캐릭터 선택 화면 진입 여부를 고정 UI 요소(화면 제목) 인식으로 검증
-4. 실행 결과를 HTML 리포트로 자동 생성 (단계별 스크린샷 포함)
+4. 각 단계마다 오딘 창을 맨 앞으로 가져온 뒤 스크린샷 촬영
+5. 성공/실패와 무관하게 직접 만든 리포터(`report.py`)로 HTML 리포트 자동 생성
 
 ## 실행 방법
+
+오딘이 안티치트 때문에 관리자 권한으로 실행되므로, 아래 명령어도 **관리자 권한 터미널**에서
+실행해야 합니다 (그렇지 않으면 Windows 권한 격리로 마우스 클릭이 조용히 실패함).
 
 \`\`\`
 venv\\Scripts\\activate
 cd smoke_test.air
 python smoke_test.py
-airtest report smoke_test.py --log_root log --outfile log/report.html
 \`\`\`
+
+실행 후 `smoke_test.air/log/report.html`을 열면 결과를 확인할 수 있습니다.
 
 ## 설계 문서
 
