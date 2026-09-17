@@ -51,9 +51,35 @@ def _clear_log_dir():
     os.makedirs(LOG_DIR, exist_ok=True)
 
 
+def _find_odin_windows():
+    """제목이 WINDOW_TITLE_RE에 맞는, 화면에 보이는 최상위 창 핸들 목록."""
+    def _collect(hwnd, hwnds):
+        if win32gui.IsWindowVisible(hwnd) and re.search(WINDOW_TITLE_RE, win32gui.GetWindowText(hwnd)):
+            hwnds.append(hwnd)
+        return True
+
+    hwnds = []
+    win32gui.EnumWindows(_collect, hwnds)
+    return hwnds
+
+
+def _check_single_odin_window():
+    """오딘 창이 정확히 하나일 때만 진행한다. 클라이언트가 중복 실행되면 pywinauto가
+    ElementAmbiguousError를 내는데, 그 원문보다 어떤 상태인지 바로 알려주는 편이 낫다."""
+    count = len(_find_odin_windows())
+    if count == 0:
+        raise Exception("오딘 창을 찾을 수 없습니다. 오딘을 실행해 스플래시 화면 상태로 띄워두고 다시 실행해주세요.")
+    if count > 1:
+        raise Exception(
+            f"오딘 창이 {count}개 열려 있습니다. 클라이언트가 중복 실행된 상태이니 "
+            f"하나만 남기고 다시 실행해주세요."
+        )
+
+
 def run_smoke_test():
     _clear_log_dir()
     auto_setup(__file__, logdir=True)
+    _check_single_odin_window()
     connect_device(f"Windows:///?title_re={WINDOW_TITLE_RE}")
     reporter.step("오딘 창에 연결됨")
 
@@ -111,13 +137,7 @@ def _wait_all(templates, timeout):
 
 def _bring_odin_to_front():
     """다른 창에 가려진 채로 스크린샷이 찍히지 않도록, 오딘 창을 맨 앞으로 가져온다."""
-    def _find(hwnd, hwnds):
-        if win32gui.IsWindowVisible(hwnd) and re.search(WINDOW_TITLE_RE, win32gui.GetWindowText(hwnd)):
-            hwnds.append(hwnd)
-        return True
-
-    hwnds = []
-    win32gui.EnumWindows(_find, hwnds)
+    hwnds = _find_odin_windows()
     if not hwnds:
         return
     hwnd = hwnds[0]
@@ -130,10 +150,16 @@ def _bring_odin_to_front():
 
 
 def _snap(name):
-    """오딘 창을 맨 앞으로 가져온 뒤, 스크린샷을 log 폴더에 저장하고 파일명을 돌려준다."""
+    """오딘 창을 맨 앞으로 가져온 뒤, 스크린샷을 log 폴더에 저장하고 파일명을 돌려준다.
+    연결 자체가 안 된 상태(NoDeviceError 등)에서는 None을 돌려줘서, 실패 처리 중에 또 예외가
+    나서 원래 실패 원인을 덮어버리지 않도록 한다."""
     _bring_odin_to_front()
     filename = f"{name}.png"
-    snapshot(filename=filename)
+    try:
+        snapshot(filename=filename)
+    except Exception as e:
+        print(f"[SNAP] 스크린샷 실패 (무시하고 계속): {e}")
+        return None
     return filename
 
 
