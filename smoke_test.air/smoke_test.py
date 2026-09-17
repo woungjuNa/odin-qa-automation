@@ -7,6 +7,8 @@ import win32con
 import win32gui
 
 from airtest.core.api import *
+from airtest.core.error import NoDeviceError
+from pywinauto.findwindows import ElementAmbiguousError, ElementNotFoundError
 from report import Reporter
 
 WINDOW_TITLE_RE = r"ODIN"
@@ -163,6 +165,23 @@ def _snap(name):
     return filename
 
 
+def _describe_error(e):
+    """예외를 리포트/시트에 기록할 한글 문장으로 바꾼다. 이 스크립트가 직접 raise한 Exception은
+    이미 한글이라 그대로 두고, 라이브러리(pywinauto/Airtest)가 낸 예외는 원문 대신 상황을 설명한다.
+    영문 원문은 콘솔 트레이스백에 그대로 남으므로 여기서는 읽는 사람 기준으로만 쓴다."""
+    if isinstance(e, ElementAmbiguousError):
+        return "오딘 창이 여러 개 열려 있어 어느 창에 연결할지 정할 수 없습니다. 클라이언트를 하나만 남기고 다시 실행해주세요."
+    if isinstance(e, ElementNotFoundError):
+        return "오딘 창을 찾을 수 없습니다. 오딘을 실행해 스플래시 화면 상태로 띄워두고 다시 실행해주세요."
+    if isinstance(e, NoDeviceError):
+        return "오딘 창에 연결되지 않은 상태에서 화면 작업을 시도했습니다. 연결 단계가 실패했는지 확인해주세요."
+    if isinstance(e, TargetNotFoundError):
+        return f"화면에서 필요한 UI 요소를 찾지 못했습니다. ({e})"
+    if type(e) is Exception:
+        return str(e)  # 이 스크립트가 직접 만든 한글 메시지
+    return f"예상하지 못한 오류가 발생했습니다. ({type(e).__name__}: {e})"
+
+
 def _send_to_sheet(passed, error_message=""):
     """sheets_config.py가 있으면, 실행 결과 한 줄을 Google Sheets 웹훅으로 전송한다.
     설정 파일이 없거나 전송이 실패해도 테스트 자체는 실패시키지 않는다."""
@@ -204,8 +223,8 @@ if __name__ == "__main__":
         run_smoke_test()
         passed = True
     except Exception as e:
-        error_message = str(e)
-        reporter.step(f"스모크 테스트 실패: {e}", status="fail", screenshot=_snap("99_failure"))
+        error_message = _describe_error(e)
+        reporter.step(f"스모크 테스트 실패: {error_message}", status="fail", screenshot=_snap("99_failure"))
         raise
     finally:
         os.makedirs(LOG_DIR, exist_ok=True)
