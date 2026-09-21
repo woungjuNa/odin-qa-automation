@@ -1,4 +1,5 @@
 import pywintypes
+from airtest.aircv.error import FileNotExistError
 from airtest.core.error import NoDeviceError, TargetNotFoundError
 from pywinauto.findwindows import ElementAmbiguousError, ElementNotFoundError
 
@@ -37,4 +38,10 @@ def test_stage_labels_cover_all_stages():
 def test_describe_error_uipi_cursor_block_suggests_admin():
     e = pywintypes.error(0, "SetCursorPos", "No error message is available")
     assert "관리자 권한" in errors.describe_error(e)
+    assert errors.classify(e)[0] == "setup"
+
+
+def test_describe_error_missing_template_file():
+    e = FileNotExistError("File not exist: templates/top_menu/gift_opened.png")
+    assert "템플릿 이미지 파일이 없습니다" in errors.describe_error(e)
     assert errors.classify(e)[0] == "setup"
