@@ -401,6 +401,7 @@
       <span class="chip">이미지 템플릿 매칭</span>
       <span class="chip">pywin32</span>
       <span class="chip">커스텀 HTML 리포터</span>
+      <span class="chip">pytest</span>
       <span class="chip">Google Sheets / Apps Script</span>
     </div>
   </section>
@@ -412,9 +413,10 @@
       <li><span class="flow-num">2</span><span class="flow-text">스플래시 로고를 인식하고, 화면이 실제로 넘어갈 때까지 반복 클릭</span></li>
       <li><span class="flow-num">3</span><span class="flow-text">캐릭터 목록과 무관하게 항상 고정으로 표시되는 화면 제목으로 캐릭터 선택 화면 진입 확인</span></li>
       <li><span class="flow-num">4</span><span class="flow-text">"게임하기" 버튼 클릭 (항상 같은 위치라 특정 캐릭터를 고를 필요 없음)</span></li>
-      <li><span class="flow-num">5</span><span class="flow-text">서로 다른 위치의 두 UI 요소(레벨 표시 + 상단 메뉴의 BM 상점 아이콘 등)가 모두 인식되어야 인게임 진입으로 판정 — 하나만 보면 다른 화면의 비슷한 아이콘에 오탐할 수 있어서</span></li>
+      <li><span class="flow-num">5</span><span class="flow-text">서로 다른 위치의 두 UI 요소(HP/MP 바 왼쪽 끝 + 상단 메뉴의 BM 상점 아이콘 등)가 모두 인식되어야 인게임 진입으로 판정 — 하나만 보면 다른 화면의 비슷한 아이콘에 오탐할 수 있어서</span></li>
       <li><span class="flow-num">6</span><span class="flow-text">성공/실패와 무관하게 단계별 스크린샷이 담긴 HTML 리포트 자동 생성</span></li>
-      <li><span class="flow-num">7</span><span class="flow-text">실행 결과(시각·PASS/FAIL·소요시간·실패 사유)를 Google Sheets에 한 줄씩 기록 — 리포트를 하나씩 열지 않아도 실행 히스토리를 한눈에 확인</span></li>
+      <li><span class="flow-num">7</span><span class="flow-text">실행 결과(시각·시나리오·PASS/FAIL·소요시간·실패 단계·실패 사유)를 Google Sheets에 한 줄씩 기록 — 리포트를 하나씩 열지 않아도 실행 히스토리를 한눈에 확인</span></li>
+      <li><span class="flow-num">8</span><span class="flow-text">두 번째 시나리오: 상단 메뉴 5개(이벤트·선물·BM 상점·가방·메뉴)를 하나씩 열고 ESC로 닫아, 각 메뉴 화면이 뜨고 HUD로 돌아오는지 확인. 인게임이 아니면 스모크 플로우를 재사용해 자동 진입</span></li>
     </ol>
     <pre><code>wait(SPLASH_LOGO, timeout=15)
 for attempt in range(15):
@@ -431,7 +433,7 @@ else:
       </figure>
       <figure>
         <img src="../screenshots/ingame.png" alt="인게임 진입 확인">
-        <figcaption>인게임 화면 — 레벨 표시 + 상단 메뉴로 이중 확인</figcaption>
+        <figcaption>인게임 화면 — HP/MP 바 + 상단 메뉴로 이중 확인</figcaption>
       </figure>
     </div>
   </section>
@@ -480,7 +482,16 @@ else:
       <dl class="trouble-row">
         <dt>증상</dt><dd>인게임 판정용으로 캡처한 하단 상점 아이콘이 사냥터에서는 다른 아이콘으로 바뀌어 있음</dd>
         <dt>원인</dt><dd>하단 액션 슬롯은 마을/사냥터 등 위치에 따라 표시되는 아이콘이 달라짐</dd>
-        <dt>해결</dt><dd class="fix">위치와 무관하게 항상 고정인 레벨 표시 + 상단 메뉴 아이콘, 두 개를 동시에 확인하도록 변경. 레벨 표시 템플릿은 주변 요소를 빼고 "레벨" 라벨만 남게 잘라 다른 화면과 겹칠 여지를 줄임</dd>
+        <dt>해결</dt><dd class="fix">위치와 무관하게 항상 고정인 요소만 쓰기로 하고, 상단 메뉴 아이콘 + 다른 위치의 요소 하나를 동시에 확인하도록 변경</dd>
+      </dl>
+    </div>
+
+    <div class="trouble">
+      <h3><span class="no">07</span> 반투명 HUD는 바닥 색을 탄다</h3>
+      <dl class="trouble-row">
+        <dt>증상</dt><dd>두 번째 앵커로 쓴 좌하단 "레벨" 라벨이, 스모크에서는 잡히던 것이 메뉴 테스트에서는 인게임인데도 인식 실패 (신뢰도 0.65, 기준 0.7)</dd>
+        <dt>원인</dt><dd>라벨이 반투명이라 뒤의 게임 월드가 비침. 나무 바닥에서 캡처한 템플릿과 모래 바닥 위의 라벨은 글자는 같아도 배경이 달라, 얇은 글자보다 배경이 매칭 점수를 좌우함. 글자만 남게 잘라도 0.4 수준</dd>
+        <dt>해결</dt><dd class="fix">후보 HUD 요소 8개를 다른 위치 스크린샷과 캐릭터 선택 화면에 대해 점수화해, 불투명 단색인 HP/MP 바 왼쪽 끝을 선택 (다른 위치 0.94, 캐릭터 선택 화면 0.24로 오탐 없음). "위치 무관"의 기준을 "위치가 고정"에서 "위치가 고정이고 배경이 비치지 않음"으로 바로잡음</dd>
       </dl>
     </div>
 
@@ -507,6 +518,9 @@ else:
       <li>계정 상태(보유 캐릭터, 위치)에 의존하지 않아 누가·언제 실행해도 동일한 기준으로 재현 가능</li>
       <li>"눈으로 보기엔 정상 같았다"는 주관적 판단 대신, 스크린샷 포함 리포트라는 객관적 증거가 매번 남음</li>
       <li>실행 이력이 Google Sheets에 누적되어, 팀원 누구나 "최근 몇 번 돌렸고 몇 번 통과했는지"를 시트만 보고 파악 가능</li>
+      <li>연결·플로우·리포트를 공통 모듈로 빼고 시나리오는 "무엇을 검증하는가"만 남겨, 메뉴 항목 추가가 표 한 줄 + 템플릿 두 장으로 끝남</li>
+      <li>실패를 실행 준비 / 사전 조건 / 조작 / 화면 확인 네 단계로 구분해 기록하고, 항목이 여럿인 테스트는 한 항목이 실패해도 나머지를 계속 확인</li>
+      <li>자동화 코드 자체도 게임 없이 도는 단위 테스트 40여 개로 검증 — 오류 분류, 항목별 집계, 시트 전송 판정, 진입/메뉴 플로우 분기</li>
     </ul>
   </section>
 
@@ -519,7 +533,7 @@ else:
       <li>지정된 UI 요소의 "존재 여부"만 확인하는 방식이라, 텍스처 미로딩·렌더링 깨짐 등 그 외 영역의 그래픽 결함은 감지하지 못함 — 이 부분은 이미지 비교 기반 UI 회귀 테스트로 보완이 필요</li>
       <li>CI 파이프라인 미연동 — 지금은 사람이 직접 실행해야 하고, 오딘이 관리자 권한을 요구해 일반적인 CI 러너에 그대로 얹기도 어려움. 실행 이력은 시트에 남지만 실패 시 Slack 등 즉시 알림은 없음</li>
       <li>단일 해상도·그래픽 설정에서만 검증 — 다른 해상도에서도 템플릿 매칭이 안정적인지는 미확인</li>
-      <li>스모크 테스트 시나리오 1종만 구현 — 인게임 메뉴 진입/복귀 검증 등 UI 시나리오로 이어서 확장할 계획</li>
+      <li>상단 메뉴 5개까지만 구현 — 햄버거 메뉴 안의 약 20개 항목은 같은 표에 항목과 템플릿을 추가하는 방식으로 확장 예정</li>
     </ul>
   </section>
 
