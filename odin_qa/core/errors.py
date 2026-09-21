@@ -1,5 +1,6 @@
 # -*- encoding=utf8 -*-
 """테스트 실패를 단계별로 구분하고, 라이브러리 예외를 한글 문장으로 바꾼다."""
+import pywintypes
 from airtest.core.error import NoDeviceError, TargetNotFoundError
 from pywinauto.findwindows import ElementAmbiguousError, ElementNotFoundError
 
@@ -36,6 +37,9 @@ def describe_error(e):
         return "오딘 창에 연결되지 않은 상태에서 화면 작업을 시도했습니다. 연결 단계가 실패했는지 확인해주세요."
     if isinstance(e, TargetNotFoundError):
         return f"화면에서 필요한 UI 요소를 찾지 못했습니다. ({e})"
+    if isinstance(e, pywintypes.error) and len(e.args) >= 2 and e.args[1] in ("SetCursorPos", "SetForegroundWindow"):
+        # 오딘은 관리자 권한으로 실행되어, 일반 권한 프로세스의 입력은 Windows UIPI에 막힌다
+        return "마우스/창 제어가 거부되었습니다. 오딘이 관리자 권한으로 실행 중이므로, 이 스크립트도 관리자 권한 터미널에서 실행해주세요."
     if type(e) is Exception:
         return str(e)
     return f"예상하지 못한 오류가 발생했습니다. ({type(e).__name__}: {e})"
