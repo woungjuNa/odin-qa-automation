@@ -69,3 +69,65 @@ def enter_game(ctx):
     ctx.step("게임하기 클릭됨 (로딩 화면 진입 대기 중)", screenshot=ctx.snap("04_play_clicked"))
 
     client.wait_all([INGAME_HUD, INGAME_TOPMENU], INGAME_TIMEOUT, "인게임 화면(레벨 표시, 상단 메뉴)")
+
+
+# --- 메뉴 시나리오용 ---
+
+MENU_OPEN_TIMEOUT = 10
+MENU_CLOSE_TIMEOUT = 10
+RECOVER_ESC_ATTEMPTS = 3
+
+
+def ensure_ingame(ctx):
+    """인게임 상태를 보장한다. 이미 인게임이면 아무것도 하지 않고, 스플래시/캐릭터 선택 화면이면
+    진입하고, 어느 화면도 아니면 사전 조건 실패로 처리한다. 진입 도중의 실패도 사전 조건 실패다 —
+    이 시나리오가 검증하려는 것이 아니기 때문."""
+    if client.all_visible(INGAME_HUD, INGAME_TOPMENU):
+        ctx.step("이미 인게임 상태 — 진입 생략")
+        return
+    try:
+        if client.visible(SPLASH_LOGO):
+            ctx.step("스플래시 화면 감지 — 인게임까지 진입합니다")
+            pass_splash(ctx)
+            enter_game(ctx)
+            return
+        if client.visible(CHARACTER_SELECT_TITLE):
+            ctx.step("캐릭터 선택 화면 감지 — 인게임까지 진입합니다")
+            enter_game(ctx)
+            return
+    except TestFailure as e:
+        raise TestFailure("precondition", f"인게임 진입 실패: {e}")
+    raise TestFailure("precondition", "인게임/스플래시/캐릭터 선택 어느 화면도 아닙니다. 오딘 상태를 확인해주세요.")
+
+
+def open_menu(ctx, key, label):
+    """상단 아이콘(templates/top_menu/<key>_icon)을 눌러 메뉴 화면(<key>_opened)이 나타나는지 확인한다."""
+    icon = T(f"top_menu/{key}_icon")
+    opened = T(f"top_menu/{key}_opened")
+    if not client.visible(icon):
+        raise TestFailure("action", f"{label} 아이콘을 화면에서 찾지 못했습니다.")
+    touch(icon)
+    try:
+        wait(opened, timeout=MENU_OPEN_TIMEOUT)
+    except TargetNotFoundError:
+        raise TestFailure("verify", f"{label} 아이콘을 눌렀지만 {MENU_OPEN_TIMEOUT}초 안에 {label} 화면이 나타나지 않았습니다.")
+    ctx.step(f"[{label}] 메뉴 열림 확인", screenshot=ctx.snap(f"{key}_opened"))
+
+
+def close_menu(ctx, label):
+    """ESC로 메뉴를 닫고 인게임 HUD(레벨 표시 + 상단 메뉴)가 돌아오는지 확인한다."""
+    client.press_esc()
+    client.wait_all([INGAME_HUD, INGAME_TOPMENU], MENU_CLOSE_TIMEOUT, f"{label} 메뉴를 닫은 뒤 인게임 화면(레벨 표시, 상단 메뉴)")
+    ctx.step(f"[{label}] 닫기 후 인게임 복귀 확인")
+
+
+def recover_ingame(ctx):
+    """항목 하나가 실패해 메뉴가 열린 채 남았을 때, 다음 항목이 연쇄로 실패하지 않도록 ESC로 복귀를
+    시도한다. 최선의 노력일 뿐이라 예외를 내지 않는다."""
+    for _ in range(RECOVER_ESC_ATTEMPTS):
+        if client.all_visible(INGAME_HUD, INGAME_TOPMENU):
+            return
+        client.press_esc()
+        sleep(1)
+    if not client.all_visible(INGAME_HUD, INGAME_TOPMENU):
+        ctx.step(f"ESC {RECOVER_ESC_ATTEMPTS}회로도 인게임 화면으로 복귀하지 못했습니다 — 이후 항목은 사전 조건이 깨진 상태로 실행됩니다")
