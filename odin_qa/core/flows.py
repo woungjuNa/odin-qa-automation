@@ -10,7 +10,7 @@ from .errors import TestFailure
 SPLASH_LOGO = T("common/splash_logo")
 CHARACTER_SELECT_TITLE = T("common/character_select_title")
 PLAY_BUTTON = T("common/play_button")
-INGAME_HUD = T("common/ingame_hud")          # 좌상단 "레벨" 라벨
+INGAME_HUD = T("common/ingame_hud")          # 좌상단 HP/MP 바 왼쪽 끝 (불투명 단색이라 배경 무관)
 INGAME_TOPMENU = T("common/ingame_topmenu")  # 우상단 메뉴 (BM 상점 아이콘 등)
 
 # 단계별 대기 시간(초) / 재시도 횟수. 실패 메시지에도 이 값이 그대로 들어간다.
@@ -52,7 +52,7 @@ def pass_splash(ctx):
 
 
 def enter_game(ctx):
-    """캐릭터 선택 화면에서 게임하기를 눌러 인게임(레벨 표시 + 상단 메뉴)까지 들어간다."""
+    """캐릭터 선택 화면에서 게임하기를 눌러 인게임(HP/MP 바 + 상단 메뉴)까지 들어간다."""
     _wait_screen(CHARACTER_SELECT_TITLE, CHARACTER_SELECT_TIMEOUT, "캐릭터 선택")
     ctx.step("캐릭터 선택 화면 진입 확인됨", screenshot=ctx.snap("03_character_select"))
 
@@ -68,7 +68,7 @@ def enter_game(ctx):
         raise TestFailure("action", f"게임하기 버튼을 {PLAY_CLICK_ATTEMPTS}번 눌렀지만 캐릭터 선택 화면을 벗어나지 못했습니다.")
     ctx.step("게임하기 클릭됨 (로딩 화면 진입 대기 중)", screenshot=ctx.snap("04_play_clicked"))
 
-    client.wait_all([INGAME_HUD, INGAME_TOPMENU], INGAME_TIMEOUT, "인게임 화면(레벨 표시, 상단 메뉴)")
+    client.wait_all([INGAME_HUD, INGAME_TOPMENU], INGAME_TIMEOUT, "인게임 화면(HP/MP 바, 상단 메뉴)")
 
 
 # --- 메뉴 시나리오용 ---
@@ -114,10 +114,13 @@ def open_menu(ctx, key, label):
     ctx.step(f"[{label}] 메뉴 열림 확인", screenshot=ctx.snap(f"{key}_opened"))
 
 
-def close_menu(ctx, label):
-    """ESC로 메뉴를 닫고 인게임 HUD(레벨 표시 + 상단 메뉴)가 돌아오는지 확인한다."""
+def close_menu(ctx, key, label):
+    """ESC로 메뉴를 닫는다. 메뉴 화면(<key>_opened)이 사라지고 인게임 HUD(HP/MP 바 + 상단 메뉴)가
+    돌아와야 닫힌 것으로 본다. 햄버거 메뉴처럼 HUD 위에 패널로 뜨는 메뉴도 있어서 둘 다 확인한다."""
+    opened = T(f"top_menu/{key}_opened")
     client.press_esc()
-    client.wait_all([INGAME_HUD, INGAME_TOPMENU], MENU_CLOSE_TIMEOUT, f"{label} 메뉴를 닫은 뒤 인게임 화면(레벨 표시, 상단 메뉴)")
+    client.wait_gone(opened, MENU_CLOSE_TIMEOUT, f"{label} 화면")
+    client.wait_all([INGAME_HUD, INGAME_TOPMENU], MENU_CLOSE_TIMEOUT, f"{label} 메뉴를 닫은 뒤 인게임 화면(HP/MP 바, 상단 메뉴)")
     ctx.step(f"[{label}] 닫기 후 인게임 복귀 확인")
 
 

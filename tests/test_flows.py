@@ -161,15 +161,33 @@ def test_open_menu_passes_when_opened_template_appears(ctx, screen, menu_templat
     assert ctx.reporter.steps[-1]["name"] == "[선물] 메뉴 열림 확인"
 
 
-def test_close_menu_presses_esc_and_waits_for_hud(ctx, screen, monkeypatch):
-    pressed = []
-    monkeypatch.setattr(flows.client, "press_esc", lambda: pressed.append(1))
-    waited = []
-    monkeypatch.setattr(flows.client, "wait_all", lambda ts, timeout, d: waited.append((tuple(ts), timeout)))
-    flows.close_menu(ctx, "선물")
-    assert pressed == [1]
-    assert waited == [((flows.INGAME_HUD, flows.INGAME_TOPMENU), flows.MENU_CLOSE_TIMEOUT)]
+def test_close_menu_presses_esc_then_waits_for_menu_gone_and_hud(ctx, screen, menu_templates, monkeypatch):
+    calls = []
+    monkeypatch.setattr(flows.client, "press_esc", lambda: calls.append("esc"))
+    monkeypatch.setattr(flows.client, "wait_gone", lambda t, timeout, d: calls.append(("gone", t, timeout)))
+    monkeypatch.setattr(flows.client, "wait_all", lambda ts, timeout, d: calls.append(("hud", tuple(ts), timeout)))
+    flows.close_menu(ctx, "gift", "선물")
+    assert calls == [
+        "esc",
+        ("gone", flows.T("top_menu/gift_opened"), flows.MENU_CLOSE_TIMEOUT),
+        ("hud", (flows.INGAME_HUD, flows.INGAME_TOPMENU), flows.MENU_CLOSE_TIMEOUT),
+    ]
     assert ctx.reporter.steps[-1]["name"] == "[선물] 닫기 후 인게임 복귀 확인"
+
+
+def test_close_menu_fails_verify_when_menu_stays_open(ctx, screen, menu_templates, monkeypatch):
+    monkeypatch.setattr(flows.client, "press_esc", lambda: None)
+    monkeypatch.setattr(flows, "sleep", lambda s: None)
+    monkeypatch.setattr(flows.client, "sleep", lambda s: None)
+    monkeypatch.setattr(flows.client, "wait_all", lambda ts, timeout, d: None)
+    monkeypatch.setattr(flows, "MENU_CLOSE_TIMEOUT", 0.01)
+    opened = flows.T("top_menu/gift_opened")
+    screen["visible"].add(opened)
+    monkeypatch.setattr(flows.client, "visible", lambda t: t in screen["visible"])
+    with pytest.raises(errors.TestFailure) as info:
+        flows.close_menu(ctx, "gift", "선물")
+    assert info.value.stage == "verify"
+    assert "닫히지 않았습니다" in str(info.value)
 
 
 def test_recover_ingame_presses_esc_until_hud_returns(ctx, screen, monkeypatch):

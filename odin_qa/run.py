@@ -12,11 +12,12 @@ import sys
 
 from core import client, errors, sheets
 from core.context import Context
-from scenarios import smoke
+from scenarios import smoke, top_menu
 
 # 실행 순서대로. 스모크가 실패하면 뒤 시나리오는 실행하지 않는다.
 SCENARIOS = {
     smoke.NAME: smoke,
+    top_menu.NAME: top_menu,
 }
 
 

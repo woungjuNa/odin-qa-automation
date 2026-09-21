@@ -56,9 +56,12 @@ def _clear_log_dir():
     os.makedirs(LOG_DIR, exist_ok=True)
 
 
-def connect():
-    """한 번의 실행에서 한 번만 호출한다. 이후 모든 시나리오가 이 연결을 공유한다."""
-    _clear_log_dir()
+def connect(clear_log=True):
+    """한 번의 실행에서 한 번만 호출한다. 이후 모든 시나리오가 이 연결을 공유한다.
+    clear_log=False는 이전 캡처를 남겨야 하는 도구(tools/capture.py)용."""
+    if clear_log:
+        _clear_log_dir()
+    os.makedirs(LOG_DIR, exist_ok=True)
     auto_setup(PROJECT_DIR, logdir=True)  # 템플릿 상대경로 기준 + log 폴더 = odin_qa/log
     _check_single_odin_window()
     connect_device(f"Windows:///?title_re={WINDOW_TITLE_RE}")
@@ -109,6 +112,16 @@ def wait_all(templates, timeout, description):
             return
         sleep(0.5)
     raise TestFailure("verify", f"{description}이 {timeout}초 안에 모두 나타나지 않았습니다.")
+
+
+def wait_gone(template, timeout, description):
+    """템플릿이 화면에서 사라질 때까지 기다린다. 시간 안에 안 사라지면 verify 실패."""
+    start = time.time()
+    while time.time() - start < timeout:
+        if not visible(template):
+            return
+        sleep(0.5)
+    raise TestFailure("verify", f"ESC를 눌렀지만 {timeout}초 안에 {description}이 닫히지 않았습니다.")
 
 
 def press_esc():

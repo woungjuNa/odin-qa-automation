@@ -67,3 +67,9 @@ def test_all_expands_to_every_scenario(monkeypatch):
     monkeypatch.setattr(run, "SCENARIOS", {"smoke": None, "top_menu": None})
     assert run.parse_names(["all"]) == ["smoke", "top_menu"]
     assert run.parse_names(["top_menu"]) == ["top_menu"]
+
+
+def test_registered_scenarios_and_order():
+    assert list(run.SCENARIOS) == ["smoke", "top_menu"]
+    for mod in run.SCENARIOS.values():
+        assert callable(mod.run) and mod.TITLE
