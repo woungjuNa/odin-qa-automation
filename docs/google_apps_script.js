@@ -2,7 +2,7 @@
 // 사용법: 시트 메뉴 > 확장 프로그램 > Apps Script > 아래 코드로 교체 > 저장
 // > 배포 > 배포 관리 > 수정(연필 아이콘) > 버전: 새 버전 > 배포
 
-var HEADERS = ["실행 시각", "결과", "소요시간(초)", "실패 사유"];
+var HEADERS = ["실행 시각", "시나리오", "결과", "소요시간(초)", "실패 단계", "실패 사유"];
 var PASS_COLOR = "#dcfff1";
 var FAIL_COLOR = "#ffedeb";
 
@@ -28,16 +28,16 @@ function doPost(e) {
     setupHeader(sheet);
   }
 
-  var row = [data.timestamp, data.result, data.duration, data.error || ""];
+  var row = [data.timestamp, data.scenario || "", data.result, data.duration, data.stage || "", data.error || ""];
   sheet.appendRow(row);
 
   var newRow = sheet.getLastRow();
   colorResultCell(sheet, newRow, data.result);
 
-  // 실행 시각, 소요시간, 실패 사유는 가운데 맞춤
-  sheet.getRange(newRow, 1).setHorizontalAlignment("center");
-  sheet.getRange(newRow, 3).setHorizontalAlignment("center");
-  sheet.getRange(newRow, 4).setHorizontalAlignment("center");
+  // 결과(3열)는 colorResultCell에서 처리, 나머지는 모두 가운데 맞춤
+  [1, 2, 4, 5, 6].forEach(function (col) {
+    sheet.getRange(newRow, col).setHorizontalAlignment("center");
+  });
 
   return jsonResponse({ status: "ok" });
 }
@@ -57,13 +57,15 @@ function setupHeader(sheet) {
 
   sheet.setFrozenRows(1);
   sheet.setColumnWidth(1, 160); // 실행 시각
-  sheet.setColumnWidth(2, 80);  // 결과
-  sheet.setColumnWidth(3, 110); // 소요시간
-  sheet.setColumnWidth(4, 320); // 실패 사유
+  sheet.setColumnWidth(2, 100); // 시나리오
+  sheet.setColumnWidth(3, 80);  // 결과
+  sheet.setColumnWidth(4, 110); // 소요시간
+  sheet.setColumnWidth(5, 100); // 실패 단계
+  sheet.setColumnWidth(6, 420); // 실패 사유
 }
 
 function colorResultCell(sheet, rowNum, result) {
-  var cell = sheet.getRange(rowNum, 2);
+  var cell = sheet.getRange(rowNum, 3);
   cell.setFontWeight("bold");
   cell.setHorizontalAlignment("center");
   cell.setBackground(result === "PASS" ? PASS_COLOR : FAIL_COLOR);

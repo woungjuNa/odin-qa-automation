@@ -1,5 +1,6 @@
 venv/
-smoke_test.air/sheets_config.py
-smoke_test.air/log/
+odin_qa/sheets_config.py
+odin_qa/log/
 __pycache__/
 *.pyc
+.pytest_cache/
